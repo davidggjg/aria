@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 
 export const colors = {
-  user: chalk.cyan,
+  user: chalk.cyan.bold,
   assistant: chalk.white,
   tool: chalk.yellow,
   system: chalk.gray,
@@ -12,23 +12,17 @@ export const colors = {
 
 export function printBanner() {
   console.log(chalk.bold.magenta(`
-  ▄████████    ▄████████  ▄█     ▄████████ 
-  ███    ███   ███    ███ ███    ███    ███ 
-  ███    ███   ███    ███ ███▌   ███    ███ 
-  ███    ███  ▄███▄▄▄▄██▀ ███▌   ███    ███ 
-▀███████████ ▀▀███▀▀▀▀▀   ███▌ ▀███████████ 
-  ███    ███ ▀███████████ ███    ███    ███ 
-  ███    ███   ███    ███ ███    ███    ███ 
-  ███    █▀    ███    ███ █▀     ███    █▀  
-               ███    ███                   
+   ▄████████    ▄████████  ▄█     ▄████████ 
+   ███    ███   ███    ███ ███    ███    ███ 
+   ███    ███   ███    ███ ███▌   ███    ███ 
+   ███    ███  ▄███▄▄▄▄██▀ ███▌   ███    ███ 
+ ▀███████████ ▀▀███▀▀▀▀▀   ███▌ ▀███████████ 
+   ███    ███ ▀███████████ ███    ███    ███ 
+   ███    ███   ███    ███ ███    ███    ███ 
+   ███    █▀    ███    ███ █▀     ███    █▀  
 `))
-  console.log(chalk.dim('  AI coding agent · powered by Claude\n'))
-  console.log(chalk.dim('  Commands: /memory  /coordinator  /clear  /exit\n'))
-}
-
-export function printUser(text: string) {
-  process.stdout.write(colors.user('\nYou: ') + text + '\n\n')
-  process.stdout.write(colors.assistant('Aria: '))
+  console.log(chalk.dim('   AI Agent · Full Windows Access · Powered by Claude\n'))
+  console.log(chalk.dim('   Type /help for commands\n'))
 }
 
 export function printSystem(text: string) {
