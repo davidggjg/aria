@@ -4,878 +4,641 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aria — AI Agent</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --bg2: #0f0f18;
-    --bg3: #14141f;
-    --border: #1e1e2e;
-    --accent: #a78bfa;
-    --accent2: #7c3aed;
-    --accent3: #c4b5fd;
-    --green: #4ade80;
-    --yellow: #fbbf24;
-    --red: #f87171;
-    --blue: #60a5fa;
-    --text: #e2e8f0;
-    --muted: #475569;
-    --muted2: #334155;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* ── Scanlines overlay ── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.03) 2px,
-      rgba(0,0,0,0.03) 4px
-    );
-    pointer-events: none;
-    z-index: 1000;
-  }
-
-  /* ── Header ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    height: 52px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  header::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
-    opacity: 0.6;
-  }
-
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 20px;
-    letter-spacing: -0.5px;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logo-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
-    50% { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
-  }
-
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .status-badge {
-    font-size: 11px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .status-badge.connected { color: var(--green); }
-  .status-badge.disconnected { color: var(--red); }
-
-  #connect-btn {
-    background: var(--accent2);
-    border: none;
-    color: white;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    padding: 6px 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  #connect-btn:hover { background: var(--accent); }
-
-  /* ── Layout ── */
-  .layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* ── Sidebar ── */
-  .sidebar {
-    width: 220px;
-    background: var(--bg2);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
-
-  .sidebar-section {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sidebar-title {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 12px;
-  }
-
-  .cmd-btn {
-    display: block;
-    width: 100%;
-    text-align: right;
-    background: none;
-    border: 1px solid transparent;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 4px;
-  }
-
-  .cmd-btn:hover {
-    background: var(--bg3);
-    border-color: var(--border);
-    color: var(--accent3);
-  }
-
-  .cmd-btn .cmd-icon {
-    margin-left: 8px;
-    color: var(--accent2);
-  }
-
-  .memory-display {
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.6;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .memory-fact {
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    font-size: 11px;
-  }
-
-  .memory-fact:last-child { border-bottom: none; }
-
-  /* ── Chat area ── */
-  .chat-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  #messages::-webkit-scrollbar { width: 4px; }
-  #messages::-webkit-scrollbar-track { background: transparent; }
-  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* ── Messages ── */
-  .msg {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    animation: fadeIn 0.2s ease;
-    max-width: 85%;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .msg.user { align-self: flex-end; align-items: flex-end; }
-  .msg.assistant { align-self: flex-start; align-items: flex-start; }
-  .msg.system-msg { align-self: center; align-items: center; max-width: 100%; }
-
-  .msg-label {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .msg.user .msg-label { color: var(--accent3); }
-
-  .msg-bubble {
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .msg.user .msg-bubble {
-    background: var(--accent2);
-    color: white;
-    border-radius: 8px 2px 8px 8px;
-  }
-
-  .msg.assistant .msg-bubble {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 2px 8px 8px 8px;
-  }
-
-  .msg.system-msg .msg-bubble {
-    background: transparent;
-    border: 1px dashed var(--border);
-    color: var(--muted);
-    font-size: 11px;
-    border-radius: 4px;
-    padding: 8px 16px;
-  }
-
-  /* ── Tool blocks ── */
-  .tool-block {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-right: 3px solid var(--accent2);
-    border-radius: 4px;
-    padding: 10px 14px;
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
-    max-width: 100%;
-  }
-
-  .tool-block .tool-name {
-    color: var(--yellow);
-    font-size: 11px;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .tool-block .tool-output {
-    color: var(--text);
-    opacity: 0.7;
-    white-space: pre-wrap;
-    max-height: 150px;
-    overflow-y: auto;
-    font-size: 11px;
-  }
-
-  /* ── Thinking indicator ── */
-  .thinking {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--muted);
-    font-size: 12px;
-    padding: 8px 0;
-  }
-
-  .thinking-dots span {
-    display: inline-block;
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: bounce 1.2s ease-in-out infinite;
-  }
-
-  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes bounce {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
-    40% { transform: scale(1); opacity: 1; }
-  }
-
-  /* ── Input area ── */
-  .input-area {
-    padding: 16px 24px;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .input-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-  }
-
-  #user-input {
-    flex: 1;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    padding: 12px 16px;
-    resize: none;
-    min-height: 48px;
-    max-height: 160px;
-    outline: none;
-    transition: border-color 0.2s;
-    direction: rtl;
-  }
-
-  #user-input:focus { border-color: var(--accent2); }
-  #user-input::placeholder { color: var(--muted2); }
-
-  #send-btn {
-    background: var(--accent2);
-    border: none;
-    color: white;
-    width: 48px; height: 48px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 18px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  #send-btn:hover { background: var(--accent); transform: scale(1.05); }
-  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-  .input-hint {
-    font-size: 10px;
-    color: var(--muted2);
-    margin-top: 8px;
-    text-align: center;
-  }
-
-  /* ── Welcome screen ── */
-  .welcome {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 16px;
-    color: var(--muted);
-    text-align: center;
-    padding: 40px;
-  }
-
-  .welcome-logo {
-    font-family: 'Syne', sans-serif;
-    font-size: 56px;
-    font-weight: 800;
-    color: var(--accent);
-    letter-spacing: -2px;
-    line-height: 1;
-    text-shadow: 0 0 60px rgba(167,139,250,0.3);
-  }
-
-  .welcome-sub {
-    font-size: 13px;
-    color: var(--muted);
-    max-width: 340px;
-    line-height: 1.7;
-  }
-
-  .welcome-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 8px;
-  }
-
-  .chip {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 11px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .chip:hover {
-    border-color: var(--accent2);
-    color: var(--accent3);
-    background: rgba(124,58,237,0.1);
-  }
-
-  .connect-notice {
-    background: rgba(248,113,113,0.1);
-    border: 1px solid rgba(248,113,113,0.3);
-    color: var(--red);
-    font-size: 12px;
-    padding: 10px 20px;
-    border-radius: 6px;
-    margin-top: 8px;
-  }
-
-  /* ── Connection modal ── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(4px);
-  }
-
-  .modal {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 28px;
-    width: 420px;
-    max-width: 90vw;
-  }
-
-  .modal h2 {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    color: var(--accent);
-    margin-bottom: 16px;
-  }
-
-  .modal p {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.7;
-    margin-bottom: 20px;
-  }
-
-  .modal code {
-    display: block;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    padding: 12px 16px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--green);
-    margin: 8px 0 20px;
-    direction: ltr;
-    text-align: left;
-  }
-
-  .modal-btn {
-    background: var(--accent2);
-    border: none;
-    color: white;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.2s;
-  }
-
-  .modal-btn:hover { background: var(--accent); }
-
-  .hidden { display: none !important; }
-
-  /* Scrollbar for sidebar */
-  .sidebar::-webkit-scrollbar { width: 3px; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+:root {
+  --bg: #0a0a0f;
+  --bg2: #0f0f18;
+  --bg3: #14141f;
+  --border: #1e1e2e;
+  --accent: #a78bfa;
+  --accent2: #7c3aed;
+  --accent3: #c4b5fd;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --text: #e2e8f0;
+  --muted: #475569;
+  --muted2: #334155;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 50px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -1px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.3; }
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#status-text {
+  font-size: 11px;
+  color: var(--red);
+  white-space: nowrap;
+}
+#status-text.on { color: var(--green); }
+#conn-btn {
+  background: var(--accent2);
+  border: none;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#conn-btn:hover { background: var(--accent); }
+
+/* ── Layout ── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  flex-direction: row; /* sidebar right, chat left */
+}
+
+/* ── Sidebar (RIGHT in RTL) ── */
+.sidebar {
+  width: 200px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  order: 1; /* appears on right */
+}
+@media (max-width: 600px) {
+  .sidebar { display: none; }
+}
+.sb-section {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-title {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+.cmd-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: right;
+  direction: rtl;
+  margin-bottom: 3px;
+  transition: all 0.15s;
+}
+.cmd-btn:hover {
+  background: var(--bg3);
+  border-color: var(--border);
+  color: var(--accent3);
+}
+.mem-fact {
+  font-size: 11px;
+  color: var(--text);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.5;
+}
+.mem-fact:last-child { border:none; }
+.mem-empty { font-size: 11px; color: var(--muted2); }
+
+/* ── Chat (LEFT) ── */
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  order: 0;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ── Welcome ── */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  gap: 14px;
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--muted);
+}
+.welcome-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -2px;
+  text-shadow: 0 0 60px rgba(167,139,250,0.4);
+}
+.welcome-sub { font-size: 13px; line-height: 1.7; max-width: 300px; }
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 6px;
+}
+.chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+}
+.chip:hover { border-color: var(--accent2); color: var(--accent3); }
+.no-server {
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.25);
+  color: var(--red);
+  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+
+/* ── Messages ── */
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 88%;
+  animation: fadeUp 0.2s ease;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(6px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.msg.user { align-self: flex-end; align-items: flex-end; }
+.msg.aria  { align-self: flex-start; align-items: flex-start; }
+.msg.sys   { align-self: center; align-items: center; max-width: 100%; }
+
+.msg-who { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.msg.user .msg-who { color: var(--accent3); }
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg.user .bubble {
+  background: var(--accent2);
+  color: white;
+  border-radius: 8px 2px 8px 8px;
+  text-align: right;
+}
+.msg.aria .bubble {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 2px 8px 8px 8px;
+  direction: ltr;
+  text-align: left;
+}
+.msg.sys .bubble {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 14px;
+}
+
+/* ── Tool blocks ── */
+.tool-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-right: 3px solid var(--accent2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  direction: ltr;
+  text-align: left;
+}
+.tool-name { color: var(--yellow); font-size: 11px; margin-bottom: 4px; }
+.tool-out {
+  color: var(--text);
+  opacity: 0.7;
+  font-size: 11px;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* ── Thinking ── */
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dots span {
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1.2s infinite;
+}
+.dots span:nth-child(2) { animation-delay:.2s; }
+.dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes bounce {
+  0%,80%,100% { transform:scale(0.5); opacity:0.3; }
+  40% { transform:scale(1); opacity:1; }
+}
+
+/* ── Input ── */
+.input-wrap {
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+#inp {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 11px 14px;
+  resize: none;
+  min-height: 44px;
+  max-height: 140px;
+  outline: none;
+  direction: rtl;
+  transition: border-color 0.2s;
+}
+#inp:focus { border-color: var(--accent2); }
+#inp::placeholder { color: var(--muted2); }
+#send {
+  background: var(--accent2);
+  border: none;
+  color: white;
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+#send:hover { background: var(--accent); }
+#send:disabled { opacity: 0.4; cursor: not-allowed; }
+.hint {
+  font-size: 10px;
+  color: var(--muted2);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ── Modal ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+.overlay.hidden { display: none; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  width: 380px;
+  max-width: 92vw;
+  direction: rtl;
+}
+.modal h2 { font-family:'Syne',sans-serif; font-size:17px; color:var(--accent); margin-bottom:12px; }
+.modal p { font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:12px; }
+.modal pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--green);
+  margin-bottom: 16px;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+}
+#ws-url {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  direction: ltr;
+}
+.modal-btn {
+  width: 100%;
+  background: var(--accent2);
+  border: none;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.modal-btn:hover { background: var(--accent); }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <header>
-  <div class="logo">
-    <div class="logo-dot" id="status-dot"></div>
-    Aria
+  <div class="header-right">
+    <span id="status-text">⬤ לא מחובר</span>
+    <button id="conn-btn" onclick="showModal()">התחבר לשרת</button>
   </div>
-  <div class="status">
-    <span class="status-badge disconnected" id="status-text">⬤ לא מחובר</span>
-    <button id="connect-btn" onclick="showModal()">התחבר לשרת</button>
+  <div class="logo">
+    Aria <div class="dot" id="dot"></div>
   </div>
 </header>
 
-<!-- Layout -->
 <div class="layout">
 
   <!-- Chat -->
-  <div class="chat-area">
+  <div class="chat">
     <div id="messages">
-      <!-- Welcome -->
       <div class="welcome" id="welcome">
         <div class="welcome-logo">aria</div>
-        <div class="welcome-sub">
-          AI agent עם גישה מלאה ל-Windows שלך.<br>
-          הרץ את השרת המקומי כדי להתחיל.
-        </div>
-        <div class="connect-notice" id="conn-notice">
-          ⚠ השרת לא רץ — הרץ <code style="display:inline;background:none;border:none;padding:0;color:inherit;font-size:inherit">bun run dev</code> במחשב שלך
-        </div>
-        <div class="welcome-chips">
-          <div class="chip" onclick="sendQuick('מה המצב של המחשב שלי?')">מצב מחשב</div>
-          <div class="chip" onclick="sendQuick('תראה לי את הקבצים בדסקטופ')">קבצי דסקטופ</div>
-          <div class="chip" onclick="sendQuick('תבנה לי פרויקט React חדש בדסקטופ')">פרויקט React</div>
-          <div class="chip" onclick="sendQuick('מה הזיכרון והמעבד שלי עכשיו?')">RAM & CPU</div>
-          <div class="chip" onclick="sendQuick('תוריד ותתקין Node.js')">התקן Node.js</div>
+        <div class="welcome-sub">AI agent עם גישה מלאה ל-Windows שלך</div>
+        <div class="no-server" id="no-server">⚠ הרץ <b>bun run dev</b> במחשב כדי להתחבר</div>
+        <div class="chips">
+          <div class="chip" onclick="sq('מה המצב של המחשב שלי?')">מצב מחשב</div>
+          <div class="chip" onclick="sq('תראה לי את הקבצים בדסקטופ')">קבצי דסקטופ</div>
+          <div class="chip" onclick="sq('מה הזיכרון והמעבד שלי?')">RAM & CPU</div>
+          <div class="chip" onclick="sq('תבנה פרויקט React חדש בדסקטופ')">פרויקט React</div>
         </div>
       </div>
     </div>
 
-    <!-- Input -->
-    <div class="input-area">
+    <div class="input-wrap">
       <div class="input-row">
-        <textarea
-          id="user-input"
-          placeholder="כתוב פקודה או שאלה..."
-          rows="1"
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
-        <button id="send-btn" onclick="sendMessage()" title="שלח">➤</button>
+        <button id="send" onclick="send()">➤</button>
+        <textarea id="inp" placeholder="כתוב פקודה או שאלה..." rows="1"
+          onkeydown="handleKey(event)" oninput="resize(this)"></textarea>
       </div>
-      <div class="input-hint">Enter לשליחה · Shift+Enter לשורה חדשה · /help לפקודות</div>
+      <div class="hint">Enter לשליחה · Shift+Enter שורה חדשה</div>
     </div>
   </div>
 
   <!-- Sidebar -->
   <div class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-title">פקודות מהירות</div>
-      <button class="cmd-btn" onclick="sendQuick('/memory')"><span class="cmd-icon">🧠</span>/memory</button>
-      <button class="cmd-btn" onclick="sendQuick('/history')"><span class="cmd-icon">📜</span>/history</button>
-      <button class="cmd-btn" onclick="sendQuick('/dream')"><span class="cmd-icon">💭</span>/dream</button>
-      <button class="cmd-btn" onclick="sendQuick('/help')"><span class="cmd-icon">❓</span>/help</button>
+    <div class="sb-section">
+      <div class="sb-title">פקודות</div>
+      <button class="cmd-btn" onclick="sq('/memory')">🧠 זיכרון</button>
+      <button class="cmd-btn" onclick="sq('/history')">📜 היסטוריה</button>
+      <button class="cmd-btn" onclick="sq('/dream')">💭 dream</button>
+      <button class="cmd-btn" onclick="sq('/help')">❓ עזרה</button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-title">כלים</div>
-      <button class="cmd-btn" onclick="sendQuick('מה המצב של המחשב?')"><span class="cmd-icon">💻</span>system info</button>
-      <button class="cmd-btn" onclick="sendQuick('תראה לי את התהליכים הפעילים')"><span class="cmd-icon">⚙</span>processes</button>
-      <button class="cmd-btn" onclick="sendQuick('תצלם screenshot')"><span class="cmd-icon">📸</span>screenshot</button>
+    <div class="sb-section">
+      <div class="sb-title">כלים מהירים</div>
+      <button class="cmd-btn" onclick="sq('מה המצב של המחשב?')">💻 system info</button>
+      <button class="cmd-btn" onclick="sq('תראה תהליכים פעילים')">⚙ processes</button>
+      <button class="cmd-btn" onclick="sq('תצלם screenshot')">📸 screenshot</button>
     </div>
-    <div class="sidebar-section" style="flex:1">
-      <div class="sidebar-title">זיכרון</div>
-      <div class="memory-display" id="memory-display">
-        <span style="color:var(--muted2);font-size:11px">יתעדכן אחרי חיבור לשרת</span>
-      </div>
+    <div class="sb-section" style="flex:1">
+      <div class="sb-title">זיכרון</div>
+      <div id="mem-panel"><span class="mem-empty">יתעדכן אחרי חיבור</span></div>
     </div>
   </div>
-
 </div>
 
-<!-- Connection Modal -->
-<div class="modal-overlay hidden" id="modal">
+<!-- Modal -->
+<div class="overlay hidden" id="modal">
   <div class="modal">
-    <h2>🔌 חיבור לשרת המקומי</h2>
-    <p>Aria צריכה שרת שרץ על המחשב שלך כדי לגשת ל-Windows.</p>
-    <p>הרץ בפוואשל:</p>
-    <code>cd aria<br>bun run dev</code>
+    <h2>🔌 חיבור לשרת</h2>
+    <p>הרץ בפאוורשל על המחשב שלך:</p>
+    <pre>cd aria
+bun run dev</pre>
     <p>כתובת WebSocket:</p>
-    <input
-      id="ws-url"
-      value="ws://localhost:3001"
-      style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:monospace;font-size:12px;padding:10px;border-radius:4px;margin-bottom:16px;direction:ltr"
-    />
-    <button class="modal-btn" onclick="connectWS()">התחבר</button>
+    <input id="ws-url" value="ws://localhost:3001" />
+    <button class="modal-btn" onclick="connect()">התחבר</button>
   </div>
 </div>
 
 <script>
-// ── WebSocket ────────────────────────────────────────────────────────────────
-let ws = null
-let connected = false
-let thinking = false
+let ws = null, connected = false, busy = false
+let curBubble = null, curTools = null
 
-function showModal() {
-  document.getElementById('modal').classList.remove('hidden')
+function showModal() { document.getElementById('modal').classList.remove('hidden') }
+function hideModal() { document.getElementById('modal').classList.add('hidden') }
+
+function connect() {
+  const url = document.getElementById('ws-url').value.trim()
+  hideModal()
+  tryConnect(url)
 }
 
-function connectWS() {
-  const url = document.getElementById('ws-url').value.trim()
-  document.getElementById('modal').classList.add('hidden')
-
+function tryConnect(url) {
   try {
     ws = new WebSocket(url)
-
     ws.onopen = () => {
       connected = true
       setStatus(true)
-      addSystemMsg('✓ מחובר לשרת Aria')
+      sysMsg('✓ מחובר לשרת Aria')
       document.getElementById('welcome').style.display = 'none'
-      document.getElementById('conn-notice').style.display = 'none'
-      // Request memory
-      ws.send(JSON.stringify({ type: 'command', text: '/memory-json' }))
+      ws.send(JSON.stringify({ type:'command', text:'/memory-json' }))
     }
-
-    ws.onclose = () => {
-      connected = false
-      setStatus(false)
-      addSystemMsg('✗ החיבור נסגר')
-    }
-
-    ws.onerror = () => {
-      connected = false
-      setStatus(false)
-      addSystemMsg('✗ שגיאת חיבור — האם השרת רץ?')
-    }
-
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data)
-      handleServerMessage(data)
-    }
-  } catch (err) {
-    addSystemMsg('✗ כתובת לא תקינה')
-  }
+    ws.onclose = () => { connected = false; setStatus(false); sysMsg('✗ החיבור נסגר') }
+    ws.onerror = () => { connected = false; setStatus(false) }
+    ws.onmessage = e => handleMsg(JSON.parse(e.data))
+  } catch(e) { sysMsg('✗ שגיאת חיבור') }
 }
 
 function setStatus(on) {
-  const dot = document.getElementById('status-dot')
-  const text = document.getElementById('status-text')
-  if (on) {
+  const dot = document.getElementById('dot')
+  const txt = document.getElementById('status-text')
+  if(on) {
     dot.style.background = 'var(--green)'
     dot.style.boxShadow = '0 0 8px var(--green)'
-    text.textContent = '⬤ מחובר'
-    text.className = 'status-badge connected'
+    txt.textContent = '⬤ מחובר'
+    txt.className = 'on'
   } else {
     dot.style.background = 'var(--red)'
     dot.style.boxShadow = '0 0 8px var(--red)'
-    text.textContent = '⬤ לא מחובר'
-    text.className = 'status-badge disconnected'
+    txt.textContent = '⬤ לא מחובר'
+    txt.className = ''
   }
 }
 
-// ── Message handling ─────────────────────────────────────────────────────────
-let currentAssistantBubble = null
-let currentToolsContainer = null
-
-function handleServerMessage(data) {
-  removeThinking()
-
-  if (data.type === 'text') {
-    if (!currentAssistantBubble) {
-      const msg = createAssistantMsg()
-      currentAssistantBubble = msg.querySelector('.msg-bubble')
-      currentToolsContainer = msg.querySelector('.tools-container')
+function handleMsg(d) {
+  removeBusy()
+  if(d.type === 'text') {
+    if(!curBubble) {
+      const el = ariaMsg()
+      curBubble = el.querySelector('.bubble')
+      curTools = el.querySelector('.tools')
     }
-    currentAssistantBubble.textContent += data.content
-    scrollBottom()
+    curBubble.textContent += d.content
+    scrollBot()
   }
-
-  if (data.type === 'tool') {
-    const block = document.createElement('div')
-    block.className = 'tool-block'
-    block.innerHTML = `
-      <div class="tool-name">🔧 ${escHtml(data.name)}</div>
-      <div class="tool-output">${escHtml(data.output || '')}</div>
-    `
-    if (currentToolsContainer) currentToolsContainer.appendChild(block)
-    scrollBottom()
+  if(d.type === 'tool') {
+    const b = document.createElement('div')
+    b.className = 'tool-block'
+    b.innerHTML = `<div class="tool-name">🔧 ${esc(d.name)}</div><div class="tool-out">${esc(d.output||'')}</div>`
+    if(curTools) curTools.appendChild(b)
+    scrollBot()
   }
-
-  if (data.type === 'done') {
-    currentAssistantBubble = null
-    currentToolsContainer = null
-  }
-
-  if (data.type === 'memory') {
-    updateMemoryPanel(data.facts || [])
-  }
-
-  if (data.type === 'error') {
-    addSystemMsg('⚠ ' + data.message)
-  }
+  if(d.type === 'done') { curBubble=null; curTools=null }
+  if(d.type === 'memory') updateMem(d.facts||[])
+  if(d.type === 'error') sysMsg('⚠ ' + d.message)
 }
 
-// ── Send ─────────────────────────────────────────────────────────────────────
-function sendMessage() {
-  const input = document.getElementById('user-input')
-  const text = input.value.trim()
-  if (!text || thinking) return
-
-  addUserMsg(text)
-  input.value = ''
-  input.style.height = 'auto'
-
+function send() {
+  const inp = document.getElementById('inp')
+  const txt = inp.value.trim()
+  if(!txt || busy) return
+  userMsg(txt)
+  inp.value = ''
+  inp.style.height = 'auto'
   document.getElementById('welcome').style.display = 'none'
-
-  if (!connected) {
-    addSystemMsg('⚠ לא מחובר לשרת — לחץ "התחבר לשרת"')
-    return
-  }
-
-  showThinking()
-  thinking = true
-  document.getElementById('send-btn').disabled = true
-
-  ws.send(JSON.stringify({ type: 'message', text }))
+  if(!connected) { sysMsg('⚠ לא מחובר — לחץ "התחבר לשרת"'); return }
+  showBusy()
+  busy = true
+  document.getElementById('send').disabled = true
+  ws.send(JSON.stringify({ type:'message', text:txt }))
 }
 
-function sendQuick(text) {
-  document.getElementById('user-input').value = text
-  sendMessage()
+function sq(t) { document.getElementById('inp').value = t; send() }
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()} }
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,140)+'px' }
+
+function userMsg(t) {
+  const d = document.createElement('div')
+  d.className = 'msg user'
+  d.innerHTML = `<div class="msg-who">אתה</div><div class="bubble">${esc(t)}</div>`
+  msgs().appendChild(d); scrollBot()
+}
+function ariaMsg() {
+  const d = document.createElement('div')
+  d.className = 'msg aria'
+  d.innerHTML = `<div class="msg-who">Aria</div><div class="bubble"></div><div class="tools"></div>`
+  msgs().appendChild(d); scrollBot(); return d
+}
+function sysMsg(t) {
+  const d = document.createElement('div')
+  d.className = 'msg sys'
+  d.innerHTML = `<div class="bubble">${esc(t)}</div>`
+  msgs().appendChild(d); scrollBot()
+}
+function showBusy() {
+  const d = document.createElement('div')
+  d.id='busy'; d.className='thinking'
+  d.innerHTML='<span style="font-size:11px;color:var(--muted)">Aria חושבת</span><div class="dots"><span></span><span></span><span></span></div>'
+  msgs().appendChild(d); scrollBot()
+}
+function removeBusy() {
+  const b=document.getElementById('busy'); if(b)b.remove()
+  busy=false; document.getElementById('send').disabled=false
+}
+function updateMem(facts) {
+  const p=document.getElementById('mem-panel')
+  p.innerHTML = facts.length
+    ? facts.slice(0,15).map(f=>`<div class="mem-fact">${esc(f)}</div>`).join('')
+    : '<span class="mem-empty">אין זיכרונות עדיין</span>'
+}
+function msgs() { return document.getElementById('messages') }
+function scrollBot() { const m=msgs(); m.scrollTop=m.scrollHeight }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-}
-
-function autoResize(el) {
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 160) + 'px'
-}
-
-// ── DOM helpers ──────────────────────────────────────────────────────────────
-function addUserMsg(text) {
-  const div = document.createElement('div')
-  div.className = 'msg user'
-  div.innerHTML = `
-    <div class="msg-label">אתה</div>
-    <div class="msg-bubble">${escHtml(text)}</div>
-  `
-  getMessages().appendChild(div)
-  scrollBottom()
-}
-
-function createAssistantMsg() {
-  const div = document.createElement('div')
-  div.className = 'msg assistant'
-  div.innerHTML = `
-    <div class="msg-label">Aria</div>
-    <div class="msg-bubble"></div>
-    <div class="tools-container"></div>
-  `
-  getMessages().appendChild(div)
-  scrollBottom()
-  return div
-}
-
-function addSystemMsg(text) {
-  const div = document.createElement('div')
-  div.className = 'msg system-msg'
-  div.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`
-  getMessages().appendChild(div)
-  scrollBottom()
-}
-
-function showThinking() {
-  const div = document.createElement('div')
-  div.id = 'thinking'
-  div.className = 'thinking'
-  div.innerHTML = `
-    <span style="color:var(--muted);font-size:11px">Aria חושבת</span>
-    <div class="thinking-dots">
-      <span></span><span></span><span></span>
-    </div>
-  `
-  getMessages().appendChild(div)
-  scrollBottom()
-}
-
-function removeThinking() {
-  const t = document.getElementById('thinking')
-  if (t) t.remove()
-  thinking = false
-  document.getElementById('send-btn').disabled = false
-}
-
-function updateMemoryPanel(facts) {
-  const panel = document.getElementById('memory-display')
-  if (!facts.length) {
-    panel.innerHTML = '<span style="color:var(--muted2);font-size:11px">אין זיכרונות עדיין</span>'
-    return
-  }
-  panel.innerHTML = facts.slice(0, 15).map(f =>
-    `<div class="memory-fact">${escHtml(f)}</div>`
-  ).join('')
-}
-
-function getMessages() { return document.getElementById('messages') }
-function scrollBottom() {
-  const m = getMessages()
-  m.scrollTop = m.scrollHeight
-}
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-}
-
-// Auto-try connect on load
+// Auto-connect on load
 window.addEventListener('load', () => {
   setTimeout(() => {
     try {
-      ws = new WebSocket('ws://localhost:3001')
-      ws.onopen = () => {
-        connected = true
-        setStatus(true)
-        document.getElementById('welcome').querySelector('.connect-notice').style.display = 'none'
-        addSystemMsg('✓ מחובר אוטומטית לשרת Aria')
-        ws.send(JSON.stringify({ type: 'command', text: '/memory-json' }))
-      }
-      ws.onclose = () => { connected = false; setStatus(false) }
-      ws.onerror = () => { ws = null }
-      ws.onmessage = (e) => { handleServerMessage(JSON.parse(e.data)) }
-    } catch(e) {}
-  }, 500)
+      const w = new WebSocket('ws://localhost:3001')
+      w.onopen = () => { ws=w; connected=true; setStatus(true); document.getElementById('no-server').style.display='none'; sysMsg('✓ מחובר אוטומטית'); ws.send(JSON.stringify({type:'command',text:'/memory-json'})); w.onmessage=e=>handleMsg(JSON.parse(e.data)); w.onclose=()=>{connected=false;setStatus(false)} }
+      w.onerror = () => {}
+    } catch(e){}
+  }, 600)
 })
 </script>
 </body>
